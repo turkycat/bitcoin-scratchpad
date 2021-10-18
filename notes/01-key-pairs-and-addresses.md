@@ -6,26 +6,31 @@
 
 ### from mastering bitcoin
 
-private key: `1E99423A4ED27608A15A2616A2B0E9E52CED330AC530EDCC32C8FFC6A526AEDD`
+note that the examples given in the book use `ec-new` and `ec-to-public`, which are easier as starting examples and for beginners. however, when digging into the source code further down, you'll see `hd` instead of `ec` in some cases (such as `hd_private`). It is sufficient to recognize that `bx` commands for both `ec` and `hd` types exist, and safe to pretend they are the same thing (for now).
+
+private key: `1e99423a4ed27608a15a2616a2b0e9e52ced330ac530edcc32c8ffc6a526aedd`
 
 ##### uncompressed public key
 
 ```bash
-$ bx ec-to-public -u 1E99423A4ED27608A15A2616A2B0E9E52CED330AC530EDCC32C8FFC6A526AEDD
+$ bx ec-to-public -u 1e99423a4ed27608a15a2616a2b0e9e52ced330ac530edcc32c8ffc6a526aedd
 04f028892bad7ed57d2fb57bf33081d5cfcf6f9ed3d3d7f159c2e2fff579dc341a07cf33da18bd734c600b96a72bbc4749d5141c90ec8ac328ae52ddfe2e505bdb
 ```
 | 1 byte prefix | 32 byte x | 32 byte y |
 
-prefix = `04`
+prefix = `04` (used to indicate uncompressed key)
 x = `f028892bad7ed57d2fb57bf33081d5cfcf6f9ed3d3d7f159c2e2fff579dc341a`  
 y = `07cf33da18bd734c600b96a72bbc4749d5141c90ec8ac328ae52ddfe2e505bdb`  
 
 ##### compressed public key
 
 ```bash
-$ bx ec-to-public 1E99423A4ED27608A15A2616A2B0E9E52CED330AC530EDCC32C8FFC6A526AEDD
+$ bx ec-to-public 1e99423a4ed27608a15a2616a2b0e9e52ced330ac530edcc32c8ffc6a526aedd
 03f028892bad7ed57d2fb57bf33081d5cfcf6f9ed3d3d7f159c2e2fff579dc341a
 ```
+
+prefix = `03` (used to indicate compressed key with odd 'y' value) 
+x = `f028892bad7ed57d2fb57bf33081d5cfcf6f9ed3d3d7f159c2e2fff579dc341a`
 
 #### diving in
 
@@ -149,7 +154,7 @@ std::ostream& operator<<(std::ostream& output, const ec_private& argument)
 ```
 
 
-## from scratch
+## generating a key pair and address from scratch
 
 yes, yes- we can wear our fancypants and do things like `bx seed | bx ec-new | bx ...` but for demonstration purposes...
 
@@ -164,6 +169,8 @@ feed the seed into ec-new, to get a private key. (confirm: order of the curve im
 $ bx ec-new fdadee95c17af396bcc264c21299f36c72465abdce1ea10a
 3da4a88efcd38080fcfe22df5d82e859e8343ec52aca800ed997768f0e979c9a
 ```
+
+// TODO
 
 ```bash
 $ bx ec-to-public -u 3da4a88efcd38080fcfe22df5d82e859e8343ec52aca800ed997768f0e979c9a
