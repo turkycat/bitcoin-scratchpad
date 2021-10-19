@@ -1,10 +1,20 @@
 # generating private keys
 
-## using bitcoin-explorer
+- [generating private keys](#generating-private-keys)
+  - [bitcoin-explorer](#bitcoin-explorer)
+    - [private key from mastering bitcoin](#private-key-from-mastering-bitcoin)
+        - [uncompressed public key](#uncompressed-public-key)
+        - [compressed public key](#compressed-public-key)
+  - [diving in to the code](#diving-in-to-the-code)
+- [generating a key pair and address from scratch](#generating-a-key-pair-and-address-from-scratch)
+
+## bitcoin-explorer
+
+`bx` commands used throughout this guide demonstrate use of the bitcoin-explorer command line tool. Bitcoin-explorer uses libbitcoin-system (formerly called libbitcoin), which is the same library bitcoin core uses. Bitcoin-explorer is not included in bitcoin core but can be [cloned from github](https://github.com/libbitcoin/libbitcoin-explorer).
 
 [super useful bitcoin explorer wiki](https://github.com/libbitcoin/libbitcoin-explorer/wiki)
 
-### from mastering bitcoin
+### private key from mastering bitcoin
 
 note that the examples given in the book use `ec-new` and `ec-to-public`, which are easier as starting examples and for beginners. however, when digging into the source code further down, you'll see `hd` instead of `ec` in some cases (such as `hd_private`). It is sufficient to recognize that `bx` commands for both `ec` and `hd` types exist, and safe to pretend they are the same thing (for now).
 
@@ -32,13 +42,14 @@ $ bx ec-to-public 1e99423a4ed27608a15a2616a2b0e9e52ced330ac530edcc32c8ffc6a526ae
 prefix = `03` (used to indicate compressed key with odd 'y' value) 
 x = `f028892bad7ed57d2fb57bf33081d5cfcf6f9ed3d3d7f159c2e2fff579dc341a`
 
-#### diving in
+## diving in to the code
 
+[0]: from 
 ```c++
 console_result ec_new::invoke(std::ostream& output, std::ostream& error)
 {
     // Bound parameters.
-    const data_chunk& seed = get_seed_argument();                   // [0]: libbitcoin namespace type 
+    const data_chunk& seed = get_seed_argument();                   // [1]: libbitcoin namespace type 
 
     if (seed.size() < minimum_seed_size)
     {
@@ -46,7 +57,7 @@ console_result ec_new::invoke(std::ostream& output, std::ostream& error)
         return console_result::failure;
     }
 
-    ec_secret secret(new_key(seed));                                // [1]: ec_secret libbitcoin namespace type [2] new key
+    ec_secret secret(new_key(seed));                                // [2]: ec_secret libbitcoin namespace type [2] new key
     if (secret == null_hash)
     {
         error << BX_EC_NEW_INVALID_KEY << std::endl;
@@ -54,46 +65,46 @@ console_result ec_new::invoke(std::ostream& output, std::ostream& error)
     }
 
     // We don't use bc::ec_private serialization (WIF) here.
-    output << config::ec_private(secret) << std::endl;              // [5]
+    output << config::ec_private(secret) << std::endl;              // [6]
     return console_result::okay;
 }
 ```
 
-*note that [0,1] are from `libbitcoin-system`*
+*note that [1,2] are from `libbitcoin-system`*
 
-[0]: from `bitcoin/system/utility/data.hpp`
+[1]: from `bitcoin/system/utility/data.hpp`
 ```c++
 template <size_t Size>
-using byte_array = std::array<uint8_t, Size>;                       // used in [1,3]
+using byte_array = std::array<uint8_t, Size>;                       // used in [2,4]
 
 // ...
 
 typedef std::vector<uint8_t> data_chunk;
 ```
 
-[1]: from `bitcoin/system/math/elliptic_curve.hpp`
+[2]: from `bitcoin/system/math/elliptic_curve.hpp`
 ```c++
 /// Private key:
 static BC_CONSTEXPR size_t ec_secret_size = 32;
 typedef byte_array<ec_secret_size> ec_secret;
 ```
 
-[2]: from `libbitcoin-explorer/src/utility.cpp`
+[3]: from `libbitcoin-explorer/src/utility.cpp`
 
 ```c++
 // The key may be invalid, caller may test for null secret.
 ec_secret new_key(const data_chunk& seed)
 {
-    const wallet::hd_private key(seed);                             // [3]
+    const wallet::hd_private key(seed);                             // [4]
     return key.secret();
 }
 ```
 
 observe that `new_key` returns `byte_array` type but generates an `hd_private` type (hierarchical deterministic wallet) despite this being a simple key generation. the constructor for `wallet::hd_private` has an optional `uint64_t prefixes` param which defaults to `hd_public::mainnet` and invokes a factory function `from_seed(seed, prefixes)`.
 
-in `from_seed`, we will generate an `hd_private` type.
+in `from_seed`, we will generate an `hd_private` type. Note that is is not important here to understand the purpose of `hmac_sha512_hash` (this will come into play when discussing HD wallets). It is sufficient at this time to understand that `split` will return a struct containing `left`, and `right`, which are both `std::vector<uint8_t>` types. `split` will evenly divide the 512 bit (64 byte) hash into two 256 bit (32 byte) hashes.
 
-[3]: from `libbitcoin-system/src/wallet/hd_private.cpp`
+[4]: from `libbitcoin-system/src/wallet/hd_private.cpp`
 ```c++
 hd_private hd_private::from_seed(const data_slice& seed, uint64_t prefixes)
 {
@@ -114,11 +125,13 @@ hd_private hd_private::from_seed(const data_slice& seed, uint64_t prefixes)
         0x00000000
     };
 
-    return hd_private(intermediate.left, intermediate.right, master); // [4]
+    return hd_private(intermediate.left, intermediate.right, master); // [5]
 }
 ```
 
-[4]: note that `hd_private` extends `hd_public`.
+[5]: note that `hd_private` extends `hd_public`.
+
+Combined with the `hd_private` constructor invocation above, we can see that 256 bits of data passed as the first parameter will correspond to the private key `const ec_secret& secret`. This is first used to generate a public key via `from_secret` to pass to the base class `ec_public` constructor and then stored as a private member of the `hd_private` type. From this, we recognize that the `hd_public` class will not have knowledge of the private key. This design is clever, as an `hd_private` type passed to a function parameter or returned from a function as `hd_public` will be sliced- making the `secret_` member parameter of `hd_private` inaccessible.
 
 ```c++
 hd_private::hd_private(const ec_secret& secret,
@@ -129,9 +142,10 @@ hd_private::hd_private(const ec_secret& secret,
 }
 ```
 
+(returning to \[0])
 `config::ec_private` is a simple utility indirection for `encode_base16`
 
-[5]: from `libbitcoin-explorer/src/config/ec_private.cpp`
+[6]: from `libbitcoin-explorer/src/config/ec_private.cpp`
 ```c++
 namespace libbitcoin {
 namespace explorer {
@@ -154,7 +168,7 @@ std::ostream& operator<<(std::ostream& output, const ec_private& argument)
 ```
 
 
-## generating a key pair and address from scratch
+# generating a key pair and address from scratch
 
 yes, yes- we can wear our fancypants and do things like `bx seed | bx ec-new | bx ...` but for demonstration purposes...
 
@@ -175,4 +189,30 @@ $ bx ec-new fdadee95c17af396bcc264c21299f36c72465abdce1ea10a
 ```bash
 $ bx ec-to-public -u 3da4a88efcd38080fcfe22df5d82e859e8343ec52aca800ed997768f0e979c9a
 043ec6707e253265ec4e20da552d619f24b311fa157dbe05522a2bd5391cf0b485656300ab179b7552781817becb3485a449c45b3f15d1bc43e1f6d254cac6e50e
+```
+
+prefix = `04`
+x = `3ec6707e253265ec4e20da552d619f24b311fa157dbe05522a2bd5391cf0b485`
+y = `656300ab179b7552781817becb3485a449c45b3f15d1bc43e1f6d254cac6e50e`
+
+for fun, we can validate our point on the curve:
+given 'p' and our elliptic curve function as defined in secp256k1 standard
+y^2 % p = (x^3 + 7) % p
+
+```python
+>>> p = 115792089237316195423570985008687907853269984665640564039457584007908834671663
+>>> x = int('3ec6707e253265ec4e20da552d619f24b311fa157dbe05522a2bd5391cf0b485', 16)
+>>> y = int('656300ab179b7552781817becb3485a449c45b3f15d1bc43e1f6d254cac6e50e', 16)
+>>> x
+28394008727450044163285709464316028712584933539979474785302143271295358383237
+>>> y
+45858520178959979896485123217538564240936697584023300754437863457273837708558
+>>> 
+>>> 
+>>> ((x ** 3) + 7 - (y**2)) % p     # note the inner parenthesis aren't necessary
+0
+>>>
+>>>
+>>> ((x ** 3) + 7 - (y**2)) / p     
+1.9769753051771942e+152             # yep that's a big number alright
 ```
