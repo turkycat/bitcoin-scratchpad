@@ -1,18 +1,47 @@
 # generating private keys
 
 - [generating private keys](#generating-private-keys)
-  - [bitcoin-explorer](#bitcoin-explorer)
+  - [pre-reqs](#pre-reqs)
+    - [bitcoin-explorer](#bitcoin-explorer)
+    - [secp256k1](#secp256k1)
+      - [secp256k1 parameters](#secp256k1-parameters)
     - [private key from mastering bitcoin](#private-key-from-mastering-bitcoin)
         - [uncompressed public key](#uncompressed-public-key)
         - [compressed public key](#compressed-public-key)
   - [diving in to the code](#diving-in-to-the-code)
 - [generating a key pair and address from scratch](#generating-a-key-pair-and-address-from-scratch)
 
-## bitcoin-explorer
+## pre-reqs
+
+### bitcoin-explorer
 
 `bx` commands used throughout this guide demonstrate use of the bitcoin-explorer command line tool. Bitcoin-explorer uses libbitcoin-system (formerly called libbitcoin), which is the same library bitcoin core uses. Bitcoin-explorer is not included in bitcoin core but can be [cloned from github](https://github.com/libbitcoin/libbitcoin-explorer).
 
 [super useful bitcoin explorer wiki](https://github.com/libbitcoin/libbitcoin-explorer/wiki)
+
+### secp256k1
+
+`secp256k1` is one standard implementation of ECDSA. Parameters defined in this standard must be used when generating or validating any key pairs in Bitcoin.
+
+For more information on `secp256k1`, refer to the [wiki entry on bitcoin.it](https://en.bitcoin.it/wiki/Secp256k1https://en.bitcoin.it/wiki/Secp256k1)
+
+#### secp256k1 parameters
+
+note that each parameter is 256 bit, which is easier to see in hex representation.
+
+P: 115792089237316195423570985008687907853269984665640564039457584007908834671663
+0x ffff ffff ffff ffff ffff ffff ffff ffff ffff ffff ffff ffff ffff fffe ffff fc2f
+
+**order**
+N: 115792089237316195423570985008687907852837564279074904382605163141518161494337
+0x ffff ffff ffff ffff ffff ffff ffff fffe baae dce6 af48 a03b bfd2 5e8c d036 4141
+
+**generator**
+X: 55066263022277343669578718895168534326250603453777594175500187360389116729240
+0x 79be 667e f9dc bbac 55a0 6295 ce87 0b07 029b fcdb 2dce 28d9 59f2 815b 16f8 1798
+
+Y: 32670510020758816978083085130507043184471273380659243275938904335757337482424
+0x 483a da77 26a3 c465 5da4 fbfc 0e11 08a8 fd17 b448 a685 5419 9c47 d08f fb10 d4b8
 
 ### private key from mastering bitcoin
 
@@ -178,13 +207,21 @@ $ bx seed
 fdadee95c17af396bcc264c21299f36c72465abdce1ea10a
 ```
 
-feed the seed into ec-new, to get a private key. (confirm: order of the curve important here?)
+feed the seed into ec-new to get a private key. note that the seed is just a random bit of data, it has nothing to do with the order of the curve or the algorithms defined in `secp256k1` or ECDSA. A seed is always required to generate any type of randomness from a deterministic algorithm. Therefore, it is essential in practice that you use a 'good' source of entropy to generate a seed. 
+
 ```bash
 $ bx ec-new fdadee95c17af396bcc264c21299f36c72465abdce1ea10a
 3da4a88efcd38080fcfe22df5d82e859e8343ec52aca800ed997768f0e979c9a
 ```
 
-// TODO
+A private key must be in the range [0,N). `ec-new` will report an error if the seed generates an invalid private key, but we can always validate this ourselves to be extra sure.
+
+```python
+>>> n = 115792089237316195423570985008687907852837564279074904382605163141518161494337
+>>> s = int('3da4a88efcd38080fcfe22df5d82e859e8343ec52aca800ed997768f0e979c9a', 16)
+>>> s < n
+True
+```
 
 ```bash
 $ bx ec-to-public -u 3da4a88efcd38080fcfe22df5d82e859e8343ec52aca800ed997768f0e979c9a
@@ -199,6 +236,7 @@ for fun, we can validate our point on the curve:
 given 'p' and our elliptic curve function as defined in secp256k1 standard
 y^2 % p = (x^3 + 7) % p
 
+Python: 
 ```python
 >>> p = 115792089237316195423570985008687907853269984665640564039457584007908834671663
 >>> x = int('3ec6707e253265ec4e20da552d619f24b311fa157dbe05522a2bd5391cf0b485', 16)

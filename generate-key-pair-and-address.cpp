@@ -8,7 +8,6 @@ int bc::main(int argc, char* argv[])
 {
     data_chunk entropy(ec_secret_size);
 
-
     // Guard against entropy -> invalid secret (rare but possible).
     wallet::ec_private private_key{};
     while (!private_key)
