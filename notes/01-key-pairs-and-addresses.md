@@ -1,17 +1,20 @@
-# generating private keys
+# working with key pairs
 
-- [generating private keys](#generating-private-keys)
+- [working with key pairs](#working-with-key-pairs)
   - [pre-reqs](#pre-reqs)
     - [bitcoin-explorer](#bitcoin-explorer)
     - [secp256k1](#secp256k1)
-      - [secp256k1 parameters](#secp256k1-parameters)
+    - [secp256k1 parameters](#secp256k1-parameters)
+  - [overview of private / public key pair](#overview-of-private--public-key-pair)
     - [private key from mastering bitcoin](#private-key-from-mastering-bitcoin)
         - [uncompressed public key](#uncompressed-public-key)
         - [compressed public key](#compressed-public-key)
   - [diving in to the code](#diving-in-to-the-code)
-- [generating a key pair and address from scratch](#generating-a-key-pair-and-address-from-scratch)
+- [generating a key pair from scratch](#generating-a-key-pair-from-scratch)
 
 ## pre-reqs
+
+this document is an overview of the technical details of the most basic public/private key pairs used in bitcoin
 
 ### bitcoin-explorer
 
@@ -25,23 +28,25 @@
 
 For more information on `secp256k1`, refer to the [wiki entry on bitcoin.it](https://en.bitcoin.it/wiki/Secp256k1https://en.bitcoin.it/wiki/Secp256k1)
 
-#### secp256k1 parameters
+### secp256k1 parameters
 
 note that each parameter is 256 bit, which is easier to see in hex representation.
 
-P: 115792089237316195423570985008687907853269984665640564039457584007908834671663
-0x ffff ffff ffff ffff ffff ffff ffff ffff ffff ffff ffff ffff ffff fffe ffff fc2f
+p = `115792089237316195423570985008687907853269984665640564039457584007908834671663`\
+`0x ffff ffff ffff ffff ffff ffff ffff ffff ffff ffff ffff ffff ffff fffe ffff fc2f`
 
-**order**
-N: 115792089237316195423570985008687907852837564279074904382605163141518161494337
-0x ffff ffff ffff ffff ffff ffff ffff fffe baae dce6 af48 a03b bfd2 5e8c d036 4141
+**order**\
+n = `115792089237316195423570985008687907852837564279074904382605163141518161494337`\
+`0x ffff ffff ffff ffff ffff ffff ffff fffe baae dce6 af48 a03b bfd2 5e8c d036 4141`
 
-**generator**
-X: 55066263022277343669578718895168534326250603453777594175500187360389116729240
-0x 79be 667e f9dc bbac 55a0 6295 ce87 0b07 029b fcdb 2dce 28d9 59f2 815b 16f8 1798
+**generator**\
+x = `55066263022277343669578718895168534326250603453777594175500187360389116729240`\
+`0x 79be 667e f9dc bbac 55a0 6295 ce87 0b07 029b fcdb 2dce 28d9 59f2 815b 16f8 1798`
 
-Y: 32670510020758816978083085130507043184471273380659243275938904335757337482424
-0x 483a da77 26a3 c465 5da4 fbfc 0e11 08a8 fd17 b448 a685 5419 9c47 d08f fb10 d4b8
+y = `32670510020758816978083085130507043184471273380659243275938904335757337482424`\
+`0x 483a da77 26a3 c465 5da4 fbfc 0e11 08a8 fd17 b448 a685 5419 9c47 d08f fb10 d4b8`
+
+## overview of private / public key pair
 
 ### private key from mastering bitcoin
 
@@ -57,9 +62,9 @@ $ bx ec-to-public -u 1e99423a4ed27608a15a2616a2b0e9e52ced330ac530edcc32c8ffc6a52
 ```
 | 1 byte prefix | 32 byte x | 32 byte y |
 
-prefix = `04` (used to indicate uncompressed key)
-x = `f028892bad7ed57d2fb57bf33081d5cfcf6f9ed3d3d7f159c2e2fff579dc341a`  
-y = `07cf33da18bd734c600b96a72bbc4749d5141c90ec8ac328ae52ddfe2e505bdb`  
+prefix = `04` (used to indicate uncompressed key)\
+x = `f028892bad7ed57d2fb57bf33081d5cfcf6f9ed3d3d7f159c2e2fff579dc341a`\
+y = `07cf33da18bd734c600b96a72bbc4749d5141c90ec8ac328ae52ddfe2e505bdb`
 
 ##### compressed public key
 
@@ -68,7 +73,7 @@ $ bx ec-to-public 1e99423a4ed27608a15a2616a2b0e9e52ced330ac530edcc32c8ffc6a526ae
 03f028892bad7ed57d2fb57bf33081d5cfcf6f9ed3d3d7f159c2e2fff579dc341a
 ```
 
-prefix = `03` (used to indicate compressed key with odd 'y' value) 
+prefix = `03` (used to indicate compressed key with odd 'y' value)\
 x = `f028892bad7ed57d2fb57bf33081d5cfcf6f9ed3d3d7f159c2e2fff579dc341a`
 
 ## diving in to the code
@@ -197,7 +202,7 @@ std::ostream& operator<<(std::ostream& output, const ec_private& argument)
 ```
 
 
-# generating a key pair and address from scratch
+# generating a key pair from scratch
 
 yes, yes- we can wear our fancypants and do things like `bx seed | bx ec-new | bx ...` but for demonstration purposes...
 
@@ -214,7 +219,7 @@ $ bx ec-new fdadee95c17af396bcc264c21299f36c72465abdce1ea10a
 3da4a88efcd38080fcfe22df5d82e859e8343ec52aca800ed997768f0e979c9a
 ```
 
-A private key must be in the range [0,N). `ec-new` will report an error if the seed generates an invalid private key, but we can always validate this ourselves to be extra sure.
+A private key must be in the range [0,n). `ec-new` will report an error if the seed generates an invalid private key, but we can always validate this ourselves to be extra sure.
 
 ```python
 >>> n = 115792089237316195423570985008687907852837564279074904382605163141518161494337
@@ -228,13 +233,13 @@ $ bx ec-to-public -u 3da4a88efcd38080fcfe22df5d82e859e8343ec52aca800ed997768f0e9
 043ec6707e253265ec4e20da552d619f24b311fa157dbe05522a2bd5391cf0b485656300ab179b7552781817becb3485a449c45b3f15d1bc43e1f6d254cac6e50e
 ```
 
-prefix = `04`
-x = `3ec6707e253265ec4e20da552d619f24b311fa157dbe05522a2bd5391cf0b485`
+prefix = `04`\
+x = `3ec6707e253265ec4e20da552d619f24b311fa157dbe05522a2bd5391cf0b485`\
 y = `656300ab179b7552781817becb3485a449c45b3f15d1bc43e1f6d254cac6e50e`
 
-for fun, we can validate our point on the curve:
-given 'p' and our elliptic curve function as defined in secp256k1 standard
-y^2 % p = (x^3 + 7) % p
+for fun, we can validate our point on the curve:\
+given `p` and our elliptic curve function as defined in `secp256k1` standard\
+`y^2 % p = (x^3 + 7) % p`
 
 Python: 
 ```python
