@@ -1,7 +1,10 @@
 # working with key pairs
 
+this document is an overview of the technical details of the most basic public/private key pairs used in bitcoin
+
 - [working with key pairs](#working-with-key-pairs)
   - [pre-reqs](#pre-reqs)
+    - [libbitcoin-system](#libbitcoin-system)
     - [bitcoin-explorer](#bitcoin-explorer)
     - [secp256k1](#secp256k1)
     - [secp256k1 parameters](#secp256k1-parameters)
@@ -14,7 +17,11 @@
 
 ## pre-reqs
 
-this document is an overview of the technical details of the most basic public/private key pairs used in bitcoin
+a basic understanding of how ECDSA works.
+
+### libbitcoin-system
+
+libbitcoin-system is a library used heavily in Bitcoin Core. You may have seen references to this library as simply 'libbitcoin' or `#include "bitcoin/bitcoin.hpp"` in other sources (including references in [Mastering Bitcoin](https://github.com/bitcoinbook/bitcoinbook)), which appears to be the legacy naming.
 
 ### bitcoin-explorer
 
@@ -48,9 +55,11 @@ y = `326705100207588169780830851305070431844712733806592432759389043357573374824
 
 ## overview of private / public key pair
 
+a private key is like a physical key, while a public key is like the lock that the physical key opens. unline real keys and locks, these keys are based entirely on math. a private key is used to generate a public key, but a public key cannot be used to reverse engineer the private key. this guide is not indended to cover the details of ECDSA, but rather to walk through the code used within Bitcoin Core to gain an understanding of the implementation.
+
 ### private key from mastering bitcoin
 
-note that the examples given in the book use `ec-new` and `ec-to-public`, which are easier as starting examples and for beginners. however, when digging into the source code further down, you'll see `hd` instead of `ec` in some cases (such as `hd_private`). It is sufficient to recognize that `bx` commands for both `ec` and `hd` types exist, and safe to pretend they are the same thing (for now).
+note that the examples given in the book use `ec-new` and other `ec-.*` commands, which are easier as starting examples and for beginners. however, when digging into the source code further down, you'll see `hd` instead of `ec` in some cases (such as `hd_private`). It is sufficient to recognize that `bx` commands for both `ec` and `hd` types exist, and safe to pretend they are the same thing (for now).
 
 private key: `1e99423a4ed27608a15a2616a2b0e9e52ced330ac530edcc32c8ffc6a526aedd`
 
@@ -78,12 +87,14 @@ x = `f028892bad7ed57d2fb57bf33081d5cfcf6f9ed3d3d7f159c2e2fff579dc341a`
 
 ## diving in to the code
 
-[0]: from 
+let's begin to form an understanding of how all of this works. `bx` is a tool that runs commands using `libbitcoin-system`, which is the same library used by Bitcoin Core. we can look at individual commandlets of `bx` to get a more narrow view of how Bitcoin Core works without needing to understand the entire Bitcoin Core system. As it happens, `bx` uses a unique source file for each commandlet, named after the command.
+
+[0]: from `libbitcoin-explorer/src/commands/ec-new.cpp`
 ```c++
 console_result ec_new::invoke(std::ostream& output, std::ostream& error)
 {
     // Bound parameters.
-    const data_chunk& seed = get_seed_argument();                   // [1]: libbitcoin namespace type 
+    const data_chunk& seed = get_seed_argument();                   // [1]: libbitcoin type 'data_chunk'
 
     if (seed.size() < minimum_seed_size)
     {
@@ -91,7 +102,7 @@ console_result ec_new::invoke(std::ostream& output, std::ostream& error)
         return console_result::failure;
     }
 
-    ec_secret secret(new_key(seed));                                // [2]: ec_secret libbitcoin namespace type [2] new key
+    ec_secret secret(new_key(seed));                                // [2]: libbitcoin type 'ec_secret' [2] new_key
     if (secret == null_hash)
     {
         error << BX_EC_NEW_INVALID_KEY << std::endl;
@@ -104,19 +115,17 @@ console_result ec_new::invoke(std::ostream& output, std::ostream& error)
 }
 ```
 
-*note that [1,2] are from `libbitcoin-system`*
-
-[1]: from `bitcoin/system/utility/data.hpp`
+[1]: from `libbitcoin-system/include/bitcoin/system/utility/data.hpp`
 ```c++
 template <size_t Size>
-using byte_array = std::array<uint8_t, Size>;                       // used in [2,4]
+using byte_array = std::array<uint8_t, Size>;                       // [2,4]: libbitcoin type 'byte_array'
 
 // ...
 
 typedef std::vector<uint8_t> data_chunk;
 ```
 
-[2]: from `bitcoin/system/math/elliptic_curve.hpp`
+[2]: from `libbitcoin-system/include/bitcoin/system/math/elliptic_curve.hpp`
 ```c++
 /// Private key:
 static BC_CONSTEXPR size_t ec_secret_size = 32;
@@ -136,7 +145,7 @@ ec_secret new_key(const data_chunk& seed)
 
 observe that `new_key` returns `byte_array` type but generates an `hd_private` type (hierarchical deterministic wallet) despite this being a simple key generation. the constructor for `wallet::hd_private` has an optional `uint64_t prefixes` param which defaults to `hd_public::mainnet` and invokes a factory function `from_seed(seed, prefixes)`.
 
-in `from_seed`, we will generate an `hd_private` type. Note that is is not important here to understand the purpose of `hmac_sha512_hash` (this will come into play when discussing HD wallets). It is sufficient at this time to understand that `split` will return a struct containing `left`, and `right`, which are both `std::vector<uint8_t>` types. `split` will evenly divide the 512 bit (64 byte) hash into two 256 bit (32 byte) hashes.
+in `from_seed`, we will generate an `hd_private` type. Note that is is not important here to understand the purpose of `hmac_sha512_hash` (this will come into play when discussing HD wallets). It is sufficient at this time to understand that `split` will return a struct containing `left`, and `right`, which are both `std::vector<uint8_t>` types. `split` will evenly divide the 512 bit (64 byte) hash into two 256 bit (32 byte) hashes. As we can see, it is only the left half that we use as a private key.
 
 [4]: from `libbitcoin-system/src/wallet/hd_private.cpp`
 ```c++
