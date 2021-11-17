@@ -13,12 +13,10 @@ prereqs:
 sudo apt-get install build-essentials git -y
 ```
 
-(makefile coming soon)
-
-#### gen
+all the examples in this repository assume you will have already installed `libbitcoin-system` (formerly `libbitcoin`) and some may require `bitcoin-explorer`.
 
 ```
 git clone http://github.com/turkycat/bitcoin-scratchpad.git
 cd bitcoin-scratchpad
-g++ generate-key-pair-and-address.cpp -o gen -std=c++11 $(pkg-config --cflags --libs libbitcoin-system)
+make
 ```
