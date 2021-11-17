@@ -5,6 +5,7 @@
   - [overview of hd wallets](#overview-of-hd-wallets)
     - [hmac-sha512](#hmac-sha512)
     - [wallet-input format](#wallet-input-format)
+  - [diving in to the code](#diving-in-to-the-code)
 
 ## pre-reqs
 
@@ -67,3 +68,63 @@ shouldn't we expect to see 128 bytes in the second example? the short answer is 
 [wallet overview from Mastering Bitcoin](https://github.com/bitcoinbook/bitcoinbook/blob/develop/ch05.asciidoc#hd-wallets-bip-32bip-44)
 
 regardless if you understand the concepts above, from here you must accept that an HD wallet private key is written in base58-check encoding. hex encoding (base 16) is case insensitive and is what we see with `ec-new` output (only the secret key, no checksum). base58-check encoding is case sensitive, leaves out some ambiguous characters, and adds a checksum at the end to help protect against misuse. WIF is a superior encoding as it contains much more information and security in a shorter character string.
+
+
+## diving in to the code
+
+as before, let's start with the individual commandlet from `bitcoin-explorer`, `hd-new`
+
+[0]: from `libbitcoin-explorer/src/commands/hd-new.cpp`
+```c++
+console_result hd_new::invoke(std::ostream& output, std::ostream& error)
+{
+    // Bound parameters.
+    const auto version = get_version_option();
+    const data_chunk& seed = get_seed_argument();
+
+    if (seed.size() < minimum_seed_size)
+    {
+        error << BX_HD_NEW_SHORT_SEED << std::endl;
+        return console_result::failure;
+    }
+
+    // We require the private version, but public is unused here.
+    const auto prefixes = wallet::hd_private::to_prefixes(version, 0);              // [1] uint64_t prefixes
+    const wallet::hd_private private_key(seed, prefixes);                           // [2] libbitcoin type wallet::hd_private
+
+    if (!private_key)
+    {
+        error << BX_HD_NEW_INVALID_KEY << std::endl;
+        return console_result::failure;
+    }
+
+    output << private_key << std::endl;                                             // [3] output private key
+    return console_result::okay;
+}
+```
+
+in the `ec-new` example, we saw that `libbitcoin-explorer` used a few helpers to simplify the output because the default behavior of Bitcoin Core uses the more complex (but compatible) `hd_wallet` by default. that helper was called `new_key` and created an `hd_private` type with only the seed (no prefix specified)- which allows the prefix to default to `mainnet`.
+
+[1]: from `libbitcoin-system/include/bitcoin/system/wallet/hd_private.hpp`
+```c++
+class BC_API hd_private
+  : public hd_public
+{
+public:
+    static const uint64_t mainnet;
+    static const uint64_t testnet;
+
+// ...
+
+    static uint64_t to_prefixes(uint32_t private_prefix,
+        uint32_t public_prefix)
+    {
+        return uint64_t(private_prefix) << 32 | public_prefix;
+    }
+
+    /// Constructors.
+    hd_private();
+    hd_private(const hd_private& other);
+    hd_private(const data_chunk& seed, uint64_t prefixes=mainnet);
+// ...
+```

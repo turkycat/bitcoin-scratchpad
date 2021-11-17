@@ -162,7 +162,7 @@ hd_private hd_private::from_seed(const data_slice& seed, uint64_t prefixes)
     if (!verify(intermediate.left))
         return {};
 
-    const auto master = hd_lineage
+    const auto master = hd_lineage                                    // ignore this for now, assume it means 'default' or 'master private key'
     {
         prefixes,
         0x00,
@@ -178,6 +178,7 @@ hd_private hd_private::from_seed(const data_slice& seed, uint64_t prefixes)
 
 Combined with the `hd_private` constructor invocation above, we can see that 256 bits of data passed as the first parameter will correspond to the private key `const ec_secret& secret`. This is first used to generate a public key via `from_secret` to pass to the base class `ec_public` constructor and then stored as a private member of the `hd_private` type. From this, we recognize that the `hd_public` class will not have knowledge of the private key. This design is clever, as an `hd_private` type passed to a function parameter or returned from a function as `hd_public` will be sliced- making the `secret_` member parameter of `hd_private` inaccessible.
 
+[5]: from `libbitcoin-system/src/wallet/hd_private.cpp`
 ```c++
 hd_private::hd_private(const ec_secret& secret,
     const hd_chain_code& chain_code, const hd_lineage& lineage)
