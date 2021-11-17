@@ -21,7 +21,7 @@ a basic understanding of how ECDSA works.
 
 ### libbitcoin-system
 
-libbitcoin-system is a library used heavily in Bitcoin Core. You may have seen references to this library as simply 'libbitcoin' or `#include "bitcoin/bitcoin.hpp"` in other sources (including references in [Mastering Bitcoin](https://github.com/bitcoinbook/bitcoinbook)), which appears to be the legacy naming.
+libbitcoin-system is a library used heavily in Bitcoin Core. You may have seen references to this library as simply 'libbitcoin' or `#include "bitcoin/bitcoin.hpp"` in these documents as well as other sources (including references in [Mastering Bitcoin](https://github.com/bitcoinbook/bitcoinbook)), which appears to be the legacy naming.
 
 ### bitcoin-explorer
 
@@ -102,7 +102,7 @@ console_result ec_new::invoke(std::ostream& output, std::ostream& error)
         return console_result::failure;
     }
 
-    ec_secret secret(new_key(seed));                                // [2]: libbitcoin type 'ec_secret' [2] new_key
+    ec_secret secret(new_key(seed));                                // [2]: libbitcoin type ec_secret [3] libbitcoin::explorer function new_key
     if (secret == null_hash)
     {
         error << BX_EC_NEW_INVALID_KEY << std::endl;
@@ -131,6 +131,8 @@ typedef std::vector<uint8_t> data_chunk;
 static BC_CONSTEXPR size_t ec_secret_size = 32;
 typedef byte_array<ec_secret_size> ec_secret;
 ```
+
+pay special attention here to the fact that `new_key` is defined in libbitcoin::explorer, it is a helper that gives us only part of the `hd_private` type that is defined in `libbitcoin`
 
 [3]: from `libbitcoin-explorer/src/utility.cpp`
 
