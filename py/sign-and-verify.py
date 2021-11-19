@@ -1,3 +1,8 @@
+# originally taken from https://github.com/wobine/blackboard101/blob/master/EllipticCurvesPart5-TheMagic-SigningAndVerifying.py
+# video by original author: https://www.youtube.com/watch?v=U2bw_N6kQL8
+# original author youtube channel: "The Congressional Research Institute"
+# https://www.youtube.com/channel/UCgo7FCCPuylVk4luP3JAgVw
+
 # Python 2.7.6 - Super simple Elliptic Curve Presentation. No imported libraries, wrappers, nothing. # For educational purposes only
 # Below are the public specs for Bitcoin's curve - the secp256k1
 Pcurve = 2**256 - 2**32 - 2**9 - 2**8 - 2**7 - 2**6 - 2**4 -1 # The proven prime
